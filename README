@@ -1,0 +1,7 @@
+Projet ISN - Arc : programme d'archivage, de compression et de cryptage de fichier
+
+Auteur : Benoît Vey
+Licence : GNU GPLv3. Se référer à COPYING pour plus d'informations.
+
+Arc est réalisé dans le cadre d'un projet de spécialité ISN.
+L'objectif est l'implémentation d'algorithmes d'archivage, de compression et de cryptage, ainsi que l'élaboration d'un format de fichier utilisable par ces algorithmes.
