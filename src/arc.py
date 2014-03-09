@@ -24,21 +24,19 @@ import sys
 from arc import huffman
 
 def main():
-	if len(sys.argv) < 3:
+	if len(sys.argv) < 4:
 		syntaxError()
 		return
-	with open(sys.argv[1], "rb") as inputFile:
-		freqs = huffman.frequencies(inputFile)
-		rootNode = huffman.makeTree(freqs)
-		codes = huffman.makeCodes(rootNode)
-		inputFile.seek(0)
-		cmpStr = huffman.compressedString(inputFile, codes)
-	with open(sys.argv[2], "wb") as outputFile:
-		huffman.write(outputFile, codes, cmpStr)
+	if sys.argv[1] == "-c":
+		huffman.compress(sys.argv[2], sys.argv[3])
+	elif sys.argv[1] == "-d":
+		huffman.decompress(sys.argv[2], sys.argv[3])
+	else:
+		syntaxError()
 
 def syntaxError():
 	print("Syntax error.")
-	print("Usage : arc.py input_file output_file")
+	print("Usage : arc.py -c | -d input_file output_file")
 
 if __name__ == "__main__":
 	main()

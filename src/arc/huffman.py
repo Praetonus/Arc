@@ -22,6 +22,23 @@
 
 import ctypes
 
+def compress(pathI, pathO):
+	with open(pathI, "rb") as inputFile:
+		freqs = frequencies(inputFile)
+		rootNode = makeTree(freqs)
+		codes = makeCodes(rootNode)
+		inputFile.seek(0)
+		cmpStr = compressedString(inputFile, codes)
+	with open(pathO, "wb") as outputFile:
+		cmpWrite(outputFile, codes, cmpStr)
+
+def decompress(pathI, pathO):
+	with open(pathI, "rb") as inputFile:
+		freqMap = makeFreqMap(inputFile)
+		cmpStr = makeString(inputFile)
+	with open(pathO, "wb") as outputFile:
+		decmpWrite(outputFile, freqMap, cmpStr)
+
 class Node:
 	def __init__(self, char, weight):
 		self.leftLeaf = None
@@ -107,7 +124,7 @@ def compressedString(inputFile, codes):
 		cmpStr += "0"
 	return cmpStr
 
-def write(outputFile, codes, cmpStr):
+def cmpWrite(outputFile, codes, cmpStr):
 	outputFile.write(len(codes).to_bytes(1, "little"))
 	for char, code in codes.items():
 		outputFile.write(char)
@@ -134,3 +151,55 @@ def write(outputFile, codes, cmpStr):
 			count = 0
 		else:
 			count += 1
+
+def makeFreqMap(inputFile):
+	freqMap = {}
+	size = int.from_bytes(inputFile.read(1), "little")
+	for i in range(0, size):
+		char = int.from_bytes(inputFile.read(1), "little")
+		strValue = int.from_bytes(inputFile.read(1), "little")
+		strCode = []
+		j = 7
+		while j >= 0:
+			if strValue >= 2 ** j:
+				strValue -= 2 ** j
+				strCode.append("1")
+			else:
+				strCode.append("0")
+			j -= 1
+		if strCode[0] == "1":
+			while strCode[0] == "1":
+				strCode.pop(0)
+		else:
+			while strCode[0] == "0":
+				strCode.pop(0)
+		freqMap[''.join(strCode)] = char
+	return freqMap
+
+def makeString(inputFile):
+	cmpStr = []
+	byteStr = bytes()
+	byte = 0
+	while 1:
+		byteStr = inputFile.read(1)
+		if byteStr == b"":
+			break
+		byte = int.from_bytes(byteStr, "little")
+		i = 7
+		while i >= 0:
+			if byte >= 2 ** i:
+				byte -= 2 ** i
+				cmpStr.append("1")
+			else:
+				cmpStr.append("0")
+			i -= 1
+	return cmpStr
+
+def decmpWrite(outputFile, freqMap, cmpStr):
+	tmpStr = str()
+	while len(cmpStr) > 0:
+		tmpStr += cmpStr[0]
+		cmpStr.pop(0)
+		if tmpStr in freqMap:
+			outputFile.write(freqMap[tmpStr].to_bytes(1, "little"))
+			tmpStr = str()
