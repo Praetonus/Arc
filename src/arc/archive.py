@@ -20,32 +20,28 @@
 # along with Arc.  If not, see <http://www.gnu.org/licenses/>.         #
 ########################################################################
 
-import sys
-from arc import huffman
-from arc import archive
+def archive(fileList, pathO):
+	offsets = calculateOffsets(fileList)
+	with open(pathO, "wb") as outputFile:
+		outputFile.write(len(fileList).to_bytes(1, "little"))
+		for i in range(len(fileList)):
+			outputFile.write(len(fileList[i]).to_bytes(1, "little"))
+			outputFile.write(bytes(fileList[i], "utf-8"))
+			outputFile.write(offsets[i].to_bytes(1, "little"))
+		for fileName in fileList:
+			with open(fileName, "rb") as inputFile:
+				outputFile.write(inputFile.read())
 
-def main():
-	if len(sys.argv) < 4:
-		syntaxError()
-		return
-	if sys.argv[1] == "-a":
-		fileList = list(sys.argv)
-		for i in range(3):
-			fileList.pop(0)
-		archive.archive(fileList, sys.argv[2])
-	elif sys.argv[1] == "-c":
-		huffman.compress(sys.argv[2], sys.argv[3])
-	elif sys.argv[1] == "-d":
-		huffman.decompress(sys.argv[2], sys.argv[3])
-	else:
-		syntaxError()
-
-def syntaxError():
-	print("Syntax error.")
-	print("Usage :")
-	print("\tarc.py -a archive_name input_file ... : Archive files")
-	print("\tarc.py -c input_file output_file : Compress file")
-	print("\tarc.py -d input_file output_file : Decompress file")
-
-if __name__ == "__main__":
-	main()
+def calculateOffsets(fileList):
+	offsets = []
+	filesSize = 0
+	headersSize = 1
+	for fileName in fileList:
+		headersSize += len(fileName) + 2
+		with open(fileName, "rb") as inputFile:
+			offsets.append(filesSize)
+			inputFile.seek(0, 2)
+			filesSize += inputFile.tell()
+	for i in range(len(offsets)):
+		offsets[i] += headersSize
+	return offsets
