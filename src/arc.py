@@ -25,11 +25,15 @@ from arc import huffman
 from arc import archive
 
 def main():
-	if len(sys.argv) == 3:
+	if len(sys.argv) == 2:
+		if sys.argv[1] == "-h":
+			usage()
+	elif len(sys.argv) == 3:
 		if sys.argv[1] == "-e":
 			archive.extract(sys.argv[2])
 		else:
-			syntaxError()
+			print("Syntax error.")
+			usage()
 	elif len(sys.argv) >= 4:
 		if sys.argv[1] == "-a":
 			fileList = list(sys.argv)
@@ -41,13 +45,15 @@ def main():
 		elif sys.argv[1] == "-d":
 			huffman.decompress(sys.argv[2], sys.argv[3])
 		else:
-			syntaxError()
+			print("Syntax error.")
+			usage()
 	else:
-		syntaxError()
+		print("Syntax error.")
+		usage()
 
 def syntaxError():
-	print("Syntax error.")
 	print("Usage :")
+	print("\tarc.py -h : Display this message")
 	print("\tarc.py -a archive_name input_file ... : Archive files")
 	print("\tarc.py -e archive_name : Extract archive")
 	print("\tarc.py -c input_file output_file : Compress file")
