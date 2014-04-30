@@ -23,13 +23,14 @@
 import sys
 from arc import huffman
 from arc import archive
+from arc import encryption
 
 def main():
 	if len(sys.argv) == 2:
 		if sys.argv[1] == "-h":
 			usage()
 	elif len(sys.argv) == 3:
-		if sys.argv[1] == "-e":
+		if sys.argv[1] == "-x":
 			archive.extract(sys.argv[2])
 		else:
 			print("Syntax error.")
@@ -44,6 +45,13 @@ def main():
 			huffman.compress(sys.argv[2], sys.argv[3])
 		elif sys.argv[1] == "-d":
 			huffman.decompress(sys.argv[2], sys.argv[3])
+		elif sys.argv[1] == "-e":
+		  	password = input("Enter password : ").encode("utf-8")
+		  	encryption.encrypt(sys.argv[2], sys.argv[3], password)
+		elif sys.argv[1] == "-p":
+			password = input("Enter password : ").encode("utf-8")
+			if not encryption.decrypt(sys.argv[2], sys.argv[3], password):
+				print("Wrong password.")
 		else:
 			print("Syntax error.")
 			usage()
@@ -51,13 +59,15 @@ def main():
 		print("Syntax error.")
 		usage()
 
-def syntaxError():
+def usage():
 	print("Usage :")
 	print("\tarc.py -h : Display this message")
 	print("\tarc.py -a archive_name input_file ... : Archive files")
-	print("\tarc.py -e archive_name : Extract archive")
+	print("\tarc.py -x archive_name : Extract archive")
 	print("\tarc.py -c input_file output_file : Compress file")
 	print("\tarc.py -d input_file output_file : Decompress file")
+	print("\tarc.py -e input_file output_file : Encrypt file")
+	print("\tarc.py -p input_file output_file : Decrypt file")
 
 if __name__ == "__main__":
 	main()
