@@ -1,4 +1,4 @@
-#!/usr/bin/python3.3
+#!/usr/bin/python3.4
 #-*- coding: utf-8 -*-
 
 ########################################################################
@@ -21,56 +21,78 @@
 ########################################################################
 
 import os
+import pathlib
+
+class FileStruct:
+	def __init__(self, name, size, isDir):
+		self.name = name
+		self.size = size
+		self.isDir = isDir
 
 def archive(fileList, pathO):
-	offsets = calculateOffsets(fileList)
+	headers = makeHeaders(fileList)
 	with open(pathO, "wb") as outputFile:
-		outputFile.write(len(fileList).to_bytes(1, "little"))
-		for i in range(len(fileList)):
-			outputFile.write(len(fileList[i]).to_bytes(1, "little"))
-			outputFile.write(bytes(fileList[i], "utf-8"))
-			outputFile.write(offsets[i].to_bytes(1, "little"))
-		for fileName in fileList:
-			with open(fileName, "rb") as inputFile:
-				outputFile.write(inputFile.read())
+		outputFile.write(len(fileList).to_bytes(2, "little"))
+		for elem in headers:
+			name = elem.name.parts[len(elem.name.parts) - 1]
+			outputFile.write(elem.isDir.to_bytes(1, "little"))
+			outputFile.write(len(name).to_bytes(2, "little"))
+			outputFile.write(bytes(name, "utf-8"))
+			outputFile.write(elem.size.to_bytes(2, "little"))
+		for elem in headers:
+			if not elem.isDir:
+				with elem.name.open("rb") as inputFile:
+					outputFile.write(inputFile.read())
 
-def calculateOffsets(fileList):
-	offsets = []
-	filesSize = 0
-	headersSize = 1
+def makeHeaders(fileList):
+	headers = [[], 2]
 	for fileName in fileList:
-		headersSize += len(fileName) + 2
-		with open(fileName, "rb") as inputFile:
-			offsets.append(filesSize)
-			inputFile.seek(0, os.SEEK_END)
-			filesSize += inputFile.tell()
-	for i in range(len(offsets)):
-		offsets[i] += headersSize
-	return offsets
+		filePath = pathlib.Path(fileName)
+		if not filePath.exists():
+			raise FileNotFoundError("Error : file " + fileName + " does not exists.")
+		makeFileHeader(filePath, headers, 0)
+	return headers[0]
+
+def makeFileHeader(filePath, headers, level):
+	relativePath = pathlib.Path(filePath.parts[len(filePath.parts) - 1])
+	for i in range(2, level + 2):
+		relativePath = filePath.parts[len(filePath.parts) - i] / relativePath
+	if filePath.is_dir():
+		dirIndex = len(headers[0])
+		i = 0
+		headers[0].append(FileStruct(relativePath, 0, True))
+		headers[1] += 5 + len(str(relativePath))
+		for child in filePath.iterdir():
+			makeFileHeader(child, headers, level + 1)
+			i += 1
+		headers[0][dirIndex].size = i
+	elif filePath.is_file():
+		headers[0].append(FileStruct(relativePath, filePath.stat().st_size, False))
+		headers[1] += 5 + len(str(relativePath))
 
 def extract(pathI):
 	with open(pathI, "rb") as inputFile:
 		headers = parseHeaders(inputFile)
-		for fileName, offset in headers.items():
-			inputFile.seek(offset[0])
-			with open(fileName, "wb") as outputFile:
-				if offset[1] == 0:
-					outputFile.write(inputFile.read())
-				else:
-					outputFile.write(inputFile.read(offset[1]))
+		for elem in headers:
+			if elem.isDir:
+				pathlib.Path(elem.name).mkdir()
+			else:
+				with open(elem.name, "wb") as outputFile:
+					outputFile.write(inputFile.read(elem.size))
 
 def parseHeaders(inputFile):
-	headers = {}
-	fileCount = int.from_bytes(inputFile.read(1), "little")
-	prevName = str()
-	prevOffset = 0
+	headers = []
+	fileCount = int.from_bytes(inputFile.read(2), "little")
 	for i in range(fileCount):
-		nameSize = int.from_bytes(inputFile.read(1), "little")
-		name = inputFile.read(nameSize).decode("utf-8")
-		offset = int.from_bytes(inputFile.read(1), "little")
-		headers[name] = [offset, 0]
-		if prevName != "":
-			headers[prevName][1] = offset - headers[prevName][0]
-		prevName = name
-		prevOffset = offset
+		parseFileHeader(inputFile, headers, pathlib.Path())
 	return headers
+
+def parseFileHeader(inputFile, headers, parentPath):
+	isDir = bool(int.from_bytes(inputFile.read(1), "little"))
+	name = pathlib.Path(inputFile.read(int.from_bytes(inputFile.read(2), "little")).decode("utf-8"))
+	size = int.from_bytes(inputFile.read(2), "little")
+	name = pathlib.Path(parentPath / name)
+	headers.append(FileStruct(str(name), size, isDir))
+	if isDir:
+		for i in range(size):
+			parseFileHeader(inputFile, headers, name)
