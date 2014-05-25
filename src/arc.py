@@ -26,38 +26,43 @@ from arc import archive
 from arc import encryption
 
 def main():
-	if len(sys.argv) == 2:
-		if sys.argv[1] == "-h":
-			usage()
-	elif len(sys.argv) == 3:
-		if sys.argv[1] == "-x":
-			archive.extract(sys.argv[2])
+	try:
+		if len(sys.argv) == 2:
+			if sys.argv[1] == "-h":
+				usage()
+		elif len(sys.argv) == 3:
+			if sys.argv[1] == "-x":
+				archive.extract(sys.argv[2])
+			else:
+				raise RuntimeError("arc cl")
+		elif len(sys.argv) >= 4:
+			if sys.argv[1] == "-a":
+				fileList = list(sys.argv)
+				for i in range(3):
+					fileList.pop(0)
+				archive.archive(fileList, sys.argv[2])
+			elif sys.argv[1] == "-c":
+				huffman.compress(sys.argv[2], sys.argv[3])
+			elif sys.argv[1] == "-d":
+				huffman.decompress(sys.argv[2], sys.argv[3])
+			elif sys.argv[1] == "-e":
+				password = input("Enter password : ").encode("utf-8")
+				encryption.encrypt(sys.argv[2], sys.argv[3], password)
+			elif sys.argv[1] == "-p":
+				password = input("Enter password : ").encode("utf-8")
+				if not encryption.decrypt(sys.argv[2], sys.argv[3], password):
+					print("Wrong password.")
+			else:
+				raise RuntimeError("arc cl")
 		else:
-			print("Syntax error.")
-			usage()
-	elif len(sys.argv) >= 4:
-		if sys.argv[1] == "-a":
-			fileList = list(sys.argv)
-			for i in range(3):
-				fileList.pop(0)
-			archive.archive(fileList, sys.argv[2])
-		elif sys.argv[1] == "-c":
-			huffman.compress(sys.argv[2], sys.argv[3])
-		elif sys.argv[1] == "-d":
-			huffman.decompress(sys.argv[2], sys.argv[3])
-		elif sys.argv[1] == "-e":
-		  	password = input("Enter password : ").encode("utf-8")
-		  	encryption.encrypt(sys.argv[2], sys.argv[3], password)
-		elif sys.argv[1] == "-p":
-			password = input("Enter password : ").encode("utf-8")
-			if not encryption.decrypt(sys.argv[2], sys.argv[3], password):
-				print("Wrong password.")
-		else:
-			print("Syntax error.")
-			usage()
-	else:
+			raise RuntimeError("arc cl")
+	except RuntimeError as err:
+		if str(err) != "arc cl":
+			raise
 		print("Syntax error.")
 		usage()
+	except FileNotFoundError as err:
+		print(err)
 
 def usage():
 	print("Usage :")
